@@ -147,13 +147,6 @@ st.sidebar.caption("Universidad de Granada · IRC")
 st.sidebar.caption("Proyecto didáctico - 2026")
 
 # --------------------------------------------------
-# Nota: las funciones de cálculo (perdida_split, potencia_recibida,
-# distancia_maxima, ci_omnidirectional, ci_sectorized_120/60, mm1_metrics)
-# viven en calculations.py y se importan arriba. Así evitamos tener la
-# misma fórmula escrita dos veces (una en calculations.py y otra aquí).
-# --------------------------------------------------
-
-# --------------------------------------------------
 # Función para exportar a PDF
 # --------------------------------------------------
 def exportar_pdf(nombre_modulo, parametros, resultados, figura=None):
@@ -278,14 +271,73 @@ elif modulo == "🔌 GPON Planner":
     d_range = np.linspace(0, max_dist + 5 if max_dist < 40 else 40, 100)
     powers = [potencia_recibida(pot_tx, d, atenuacion, usuarios, perdidas_extra) for d in d_range]
 
-    fig1, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(d_range, powers, label="Potencia recibida", color='#1E88E5', linewidth=2)
-    ax.axhline(y=sensibilidad, color='red', linestyle='--', label=f"Sensibilidad = {sensibilidad} dBm")
-    ax.axvline(x=max_dist, color='green', linestyle=':', label=f"Distancia máxima = {max_dist:.2f} km")
-    ax.set_xlabel("Distancia (km)")
-    ax.set_ylabel("Potencia (dBm)")
-    ax.grid(True, alpha=0.3)
+    fig1, ax = plt.subplots(
+        figsize=(10, 4)
+    )
+
+    powers_np = np.array(powers)
+    ax.plot(
+        d_range,
+        powers_np,
+        color="#1E88E5",
+        linewidth=3,
+        label="Potencia recibida"
+    )
+
+    ax.axhline(
+        y=sensibilidad,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f"Sensibilidad = {sensibilidad} dBm"
+    )
+
+    ax.axvline(
+        x=max_dist,
+        color="green",
+        linestyle=":",
+        linewidth=2,
+        label=f"Distancia máxima = {max_dist:.2f} km"
+    )
+
+    ax.fill_between(
+        d_range,
+        powers_np,
+        sensibilidad,
+        where=(powers_np >= sensibilidad),
+        alpha=0.25,
+        color="green"
+    )
+
+    ax.fill_between(
+        d_range,
+        powers_np,
+        sensibilidad,
+        where=(powers_np < sensibilidad),
+        alpha=0.25,
+        color="red"
+    )
+
+    ax.set_xlabel(
+        "Distancia (km)"
+    )
+
+    ax.set_ylabel(
+        "Potencia (dBm)"
+    )
+
+    ax.set_title(
+        "Evolución de la potencia recibida"
+    )
+
+    ax.grid(
+        True,
+        linestyle=":",
+        alpha=0.5
+    )
+
     ax.legend()
+    fig1.tight_layout()
     st.pyplot(fig1)
 
     st.subheader("🌐 Esquema de la red")
@@ -426,6 +478,54 @@ elif modulo == "📶 Mobile Planner":
     ax.axis('off')
     ax.set_title(f"Reuso N={N} | D/R = {DR:.2f}")
     st.pyplot(fig)
+    st.subheader("📈 Evolución de C/I con el factor de reutilización")
+    Ns = [1, 3, 4, 7, 12, 19]
+    ci_db_values = []
+    for n in Ns:
+        if tipo_celda.startswith("Omnidireccional"):
+            _, value = ci_omnidirectional(n, gamma)
+        elif tipo_celda.startswith("Sectorizada 120"):
+            _, value = ci_sectorized_120(n, gamma)
+        else:
+            _, value = ci_sectorized_60(n, gamma)
+        ci_db_values.append(value)
+    fig_ci, ax_ci = plt.subplots(
+        figsize=(8,4)
+    )
+
+    ax_ci.plot(
+        Ns,
+        ci_db_values,
+        marker="o",
+        linewidth=3
+    )
+
+    ax_ci.axhline(
+        18,
+        linestyle="--",
+        color="red",
+        label="18 dB"
+    )
+
+    ax_ci.set_xlabel(
+        "Factor de reutilización N"
+    )
+
+    ax_ci.set_ylabel(
+        "C/I (dB)"
+    )
+
+    ax_ci.set_title(
+        "Calidad de señal según N"
+    )
+
+    ax_ci.grid(
+        True,
+        linestyle=":"
+    )
+
+    ax_ci.legend()
+    st.pyplot(fig_ci)
 
     col_b1, col_b2 = st.columns(2)
     with col_b1:
@@ -494,6 +594,55 @@ elif modulo == "⏳ Queue Simulator":
         ax.grid(True, alpha=0.3)
         ax.set_title("Distribución estacionaria M/M/1")
         st.pyplot(fig)
+        st.subheader("📈 Sensibilidad del sistema frente a λ")
+        arrival_rates = np.linspace(
+            0.1,
+            mu - 0.1,
+            150
+        )
+
+        waiting_times = [
+            1 / (mu - l)
+            for l in arrival_rates
+        ]
+
+        fig_wait, ax_wait = plt.subplots(
+            figsize=(10,4)
+        )
+
+        ax_wait.plot(
+            arrival_rates,
+            waiting_times,
+            linewidth=3,
+            color="#FF9800"
+        )
+
+        ax_wait.axvline(
+            lam,
+            linestyle="--",
+            color="red",
+            label=f"λ actual = {lam}"
+        )
+
+        ax_wait.set_xlabel(
+            "Tasa de llegada λ"
+        )
+
+        ax_wait.set_ylabel(
+            "Tiempo medio W"
+        )
+
+        ax_wait.set_title(
+            "Crecimiento del retardo al acercarse a saturación"
+        )
+
+        ax_wait.grid(
+            True,
+            linestyle=":"
+        )
+
+        ax_wait.legend()
+        st.pyplot(fig_wait)
 
         col_b1, col_b2 = st.columns(2)
         with col_b1:

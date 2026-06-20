@@ -76,7 +76,12 @@ def generar_pdf(nombre_modulo, parametros, resultados, figura=None):
         img_buffer = io.BytesIO()
         figura.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
         img_buffer.seek(0)
-        img = Image(img_buffer, width=6*inch, height=4*inch)
+        img = Image(img_buffer)
+        img.drawWidth = 6 * inch
+        img.drawHeight = (
+            img.imageHeight *
+            (img.drawWidth / img.imageWidth)
+        )
         story.append(img)
 
     # Pie
