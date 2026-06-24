@@ -1,7 +1,7 @@
-# --------------------------------------------------
-# Módulo para crear informes en PDF
-# Así el profesor puede guardar los resultados
-# --------------------------------------------------
+# ------------------------------------------------------------
+# Módulo para generar informes en PDF
+# Así el profesor (o nosotros) podemos guardar los resultados
+# ------------------------------------------------------------
 
 import io
 from reportlab.lib.pagesizes import A4
@@ -10,12 +10,24 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 
+
 def generar_pdf(nombre_modulo, parametros, resultados, figura=None):
     """
-    Crea un PDF con los parámetros, resultados y (si se da) una gráfica.
+    Crea un archivo PDF con los datos de la simulación.
+    - nombre_modulo: título del módulo (ej. "GPON Planner")
+    - parametros: diccionario con los valores de entrada
+    - resultados: diccionario con los resultados
+    - figura: objeto Figure de matplotlib (opcional)
     """
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
     styles = getSampleStyleSheet()
     story = []
 
@@ -25,19 +37,19 @@ def generar_pdf(nombre_modulo, parametros, resultados, figura=None):
         parent=styles['Title'],
         fontSize=20,
         textColor=colors.HexColor('#1E88E5'),
-        alignment=1
+        alignment=1  # centrado
     )
     story.append(Paragraph("TelecomLab - Informe técnico", titulo_style))
     story.append(Spacer(1, 6))
     story.append(Paragraph(f"<b>Módulo:</b> {nombre_modulo}", styles['Normal']))
     story.append(Spacer(1, 12))
 
-    # Tabla de parámetros de entrada
+    # Tabla de parámetros
     story.append(Paragraph("1. Parámetros introducidos", styles['Heading2']))
     data = [["Parámetro", "Valor"]]
     for k, v in parametros.items():
         data.append([k, str(v)])
-    tabla1 = Table(data, colWidths=[2.5*inch, 2.5*inch])
+    tabla1 = Table(data, colWidths=[2.5 * inch, 2.5 * inch])
     tabla1.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E88E5')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -56,7 +68,7 @@ def generar_pdf(nombre_modulo, parametros, resultados, figura=None):
     data2 = [["Métrica", "Valor"]]
     for k, v in resultados.items():
         data2.append([k, str(v)])
-    tabla2 = Table(data2, colWidths=[2.5*inch, 2.5*inch])
+    tabla2 = Table(data2, colWidths=[2.5 * inch, 2.5 * inch])
     tabla2.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#43A047')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -84,7 +96,7 @@ def generar_pdf(nombre_modulo, parametros, resultados, figura=None):
         )
         story.append(img)
 
-    # Pie
+    # Pie de página
     story.append(Spacer(1, 24))
     story.append(Paragraph("Generado con TelecomLab · Universidad de Granada", styles['Italic']))
 
