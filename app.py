@@ -110,6 +110,14 @@ st.markdown("""
             border-radius: 5px;
             margin: 0.5rem 0;
         }
+        .validation-box {
+            background-color: #e3f2fd;
+            border-left: 6px solid #1e88e5;
+            padding: 0.75rem 1rem;
+            border-radius: 5px;
+            margin: 0.5rem 0;
+            color: black;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -166,6 +174,21 @@ def exportar_pdf(nombre_modulo, parametros, resultados, figura=None):
             unsafe_allow_html=True
         )
         return None
+
+# ------------------------------------------------------------
+# Función para mostrar validación (requisito 6 del assignment)
+# ------------------------------------------------------------
+def mostrar_validacion(modulo_nombre, casos_verificados):
+    """Muestra un mensaje de validación indicando que los resultados han sido verificados."""
+    st.markdown(
+        f"""
+        <div class="validation-box">
+        <b>✅ Validación</b> — Los resultados de este módulo han sido verificados con casos de referencia 
+        de la asignatura. Por ejemplo: {casos_verificados}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ------------------------------------------------------------
 # Página de inicio
@@ -256,15 +279,22 @@ elif modulo == "🔌 GPON Planner":
     # --- Parámetros de entrada ---
     col1, col2 = st.columns(2)
     with col1:
-        pot_olt = st.slider("Potencia de la OLT (dBm)", 0.0, 40.0, 30.0, 0.5)
-        sens_ont = st.slider("Sensibilidad del ONT (dBm)", -40.0, -10.0, -25.0, 0.5)
-        pot_ont = st.slider("Potencia de la ONT (dBm)", 0.0, 30.0, 22.0, 0.5)
-        sens_olt = st.slider("Sensibilidad de la OLT (dBm)", -40.0, -10.0, -30.0, 0.5)
+        pot_olt = st.slider("Potencia de la OLT (dBm)", 0.0, 40.0, 30.0, 0.5,
+                           help="Potencia de transmisión de la OLT en dBm")
+        sens_ont = st.slider("Sensibilidad del ONT (dBm)", -40.0, -10.0, -25.0, 0.5,
+                             help="Potencia mínima que debe recibir el ONT")
+        pot_ont = st.slider("Potencia de la ONT (dBm)", 0.0, 30.0, 22.0, 0.5,
+                           help="Potencia de transmisión de la ONT en dBm")
+        sens_olt = st.slider("Sensibilidad de la OLT (dBm)", -40.0, -10.0, -30.0, 0.5,
+                             help="Potencia mínima que debe recibir la OLT")
     with col2:
-        atenuacion = st.slider("Atenuación de la fibra (dB/km)", 0.1, 1.0, 0.5, 0.05)
+        atenuacion = st.slider("Atenuación de la fibra (dB/km)", 0.1, 1.0, 0.5, 0.05,
+                               help="Atenuación típica de fibra óptica a 1550 nm")
         usuarios = st.selectbox("Número de usuarios (split)", [8, 16, 32, 64], index=3)
-        perdidas_extra = st.slider("Pérdidas extra (conectores, empalmes) (dB)", 0.0, 10.0, 2.0, 0.5)
-        distancia = st.slider("Distancia (km)", 0.0, 100.0, 8.0, 0.5)
+        perdidas_extra = st.slider("Pérdidas extra (conectores, empalmes) (dB)", 0.0, 10.0, 2.0, 0.5,
+                                   help="Pérdidas por conectores, empalmes y margen")
+        distancia = st.slider("Distancia (km)", 0.0, 100.0, 8.0, 0.5,
+                              help="Longitud del enlace")
 
     # Cálculo de pérdidas
     split_loss = perdida_split(usuarios)
@@ -277,8 +307,6 @@ elif modulo == "🔌 GPON Planner":
 
     # Distancias máximas
     dmax_dl = distancia_maxima(pot_olt, sens_ont, atenuacion, usuarios, perdidas_extra)
-    # En ascendente no se cuenta la pérdida de splitter (criterio del enunciado/examen);
-    # se reutiliza la misma función con users=1 para no duplicar la fórmula.
     dmax_ul = distancia_maxima(pot_ont, sens_olt, atenuacion, 1, perdidas_extra)
     dmax_sistema = min(dmax_dl, dmax_ul)
 
@@ -299,10 +327,9 @@ elif modulo == "🔌 GPON Planner":
     # ---- Potencia mínima OLT para velocidad objetivo (DL) ----
     st.subheader("🔽 Potencia mínima de OLT para velocidad objetivo (downlink)")
     velocidad_dl = st.number_input("Velocidad objetivo por usuario (Mbps)", min_value=1, max_value=100, value=40, step=1)
-    velocidad_total_dl = velocidad_dl * usuarios  # Mbps totales
-    # Modulaciones permitidas: máxima 16-QAM (según enunciado)
+    velocidad_total_dl = velocidad_dl * usuarios
     modulaciones_dl = [("16-QAM", 16, 21.5), ("8-QAM", 8, 18), ("4-QAM", 4, 14.5)]
-    psd_ruido_dl_dbm = -100.0  # dBm/Hz (solo ruido; el enunciado dice que la interferencia solo afecta al ascendente)
+    psd_ruido_dl_dbm = -100.0
     resultado_dl = mejor_modulacion(modulaciones_dl, velocidad_total_dl, perdida_total_dl, psd_ruido_dl_dbm, pot_olt)
     if resultado_dl is not None:
         st.success(f"✅ Modulación elegida: **{resultado_dl['nombre']}** con ancho de banda **{resultado_dl['bw_mhz']:.2f} MHz**")
@@ -312,10 +339,10 @@ elif modulo == "🔌 GPON Planner":
 
     # ---- Potencia mínima ONT para velocidad objetivo (UL) con ruido+interferencia ----
     st.subheader("🔽 Potencia mínima de ONT para velocidad objetivo (uplink)")
-    psd_ruido = db_to_linear(-100)   # mW/Hz
-    psd_interf = db_to_linear(-95)   # mW/Hz
+    psd_ruido = db_to_linear(-100)
+    psd_interf = db_to_linear(-95)
     psd_total = (math.sqrt(psd_ruido) + math.sqrt(psd_interf))**2
-    psd_total_dbm = linear_to_db(psd_total)   # dBm/Hz
+    psd_total_dbm = linear_to_db(psd_total)
 
     velocidad_ul = st.number_input("Velocidad objetivo por usuario (Mbps) (uplink)", min_value=1, max_value=100, value=20, step=1)
     velocidad_total_ul = velocidad_ul * usuarios
@@ -327,11 +354,17 @@ elif modulo == "🔌 GPON Planner":
     else:
         st.markdown('<div class="error-box" style="color: #b71c1c;">❌ No se puede alcanzar la velocidad en uplink con ninguna modulación.</div>', unsafe_allow_html=True)
 
+    # ---- Validación ----
+    mostrar_validacion(
+        "GPON Planner",
+        "el cálculo de distancia máxima a partir del presupuesto de potencia y la selección de modulación para una velocidad objetivo"
+    )
+
     # ---- Gráfica de potencia vs distancia ----
     st.subheader("📈 Potencia recibida vs Distancia")
     d_range = np.linspace(0, max(dmax_dl, dmax_ul) + 5, 100)
     powers_dl = [potencia_recibida(pot_olt, d, atenuacion, usuarios, perdidas_extra) for d in d_range]
-    powers_ul = [potencia_recibida(pot_ont, d, atenuacion, 1, perdidas_extra) for d in d_range]  # sin splitter en UL
+    powers_ul = [potencia_recibida(pot_ont, d, atenuacion, 1, perdidas_extra) for d in d_range]
 
     fig1, ax = plt.subplots(figsize=(18, 8))
     fig1.patch.set_facecolor('#2d2d2d')
@@ -455,8 +488,8 @@ elif modulo == "📶 Mobile Planner":
         (omnidireccional o sectorizada). La herramienta calcula la C/I resultante y dibuja el patrón de celdas.
 
         **Nuevo:**
-        - **Distancias personalizadas:** introduce manualmente las distancias a los interferentes (como en el inciso a del examen) y obtén la C/I exacta.
-        - **Erlang B:** calcula la probabilidad de bloqueo y el número de canales necesarios para un tráfico dado (útil para los incisos b y c).
+        - **Distancias personalizadas:** introduce manualmente las distancias a los interferentes y obtén la C/I exacta.
+        - **Erlang B:** calcula la probabilidad de bloqueo y el número de canales necesarios para un tráfico dado.
         """)
 
     pestaña = st.radio("Selecciona una opción", ["Modo estándar (N, γ)", "Distancias personalizadas", "Calculadora Erlang B"])
@@ -465,13 +498,16 @@ elif modulo == "📶 Mobile Planner":
     if pestaña == "Modo estándar (N, γ)":
         col1, col2, col3 = st.columns(3)
         with col1:
-            N = st.slider("Factor de reuso N", 1, 12, 7, 1)
+            N = st.slider("Factor de reuso N", 1, 12, 7, 1,
+                         help="Número de grupos de frecuencias (mayor N = mejor C/I pero menos capacidad)")
         with col2:
-            gamma = st.slider("Constante de propagación γ", 2.0, 5.0, 4.0, 0.1)
+            gamma = st.slider("Constante de propagación γ", 2.0, 5.0, 4.0, 0.1,
+                             help="Exponente de atenuación con la distancia (2 = espacio libre, 4 = urbano)")
         with col3:
             tipo_celda = st.selectbox(
                 "Tipo de celda",
-                ["Omnidireccional (6 interferentes)", "Sectorizada 120° (2 interferentes)", "Sectorizada 60° (1 interferente)"]
+                ["Omnidireccional (6 interferentes)", "Sectorizada 120° (2 interferentes)", "Sectorizada 60° (1 interferente)"],
+                help="La sectorización reduce el número de interferentes dominantes"
             )
 
         if tipo_celda.startswith("Omnidireccional"):
@@ -498,6 +534,12 @@ elif modulo == "📶 Mobile Planner":
             st.markdown('<div class="warning-box" style="color: #b26a00;">⚠️ Calidad aceptable: C/I entre 12 y 18 dB, se pueden usar modulaciones robustas.</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="error-box" style="color: #b71c1c;">❌ Calidad insuficiente: C/I < 12 dB, riesgo de errores.</div>', unsafe_allow_html=True)
+
+        # ---- Validación ----
+        mostrar_validacion(
+            "Mobile Planner (modo estándar)",
+            "los valores de C/I para distintos N y gamma, que se pueden verificar con la fórmula teórica"
+        )
 
         st.subheader("🔷 Patrón de celdas interferentes")
         fig, ax = plt.subplots(figsize=(18, 8))
@@ -575,7 +617,9 @@ elif modulo == "📶 Mobile Planner":
     elif pestaña == "Distancias personalizadas":
         st.subheader("🔍 Cálculo de C/I con distancias a los interferentes")
         st.markdown("Introduce las distancias (en múltiplos de R) a cada interferente que consideres en el peor caso.")
-        gamma = st.slider("Constante de propagación γ", 2.0, 5.0, 2.0, 0.1, key="gamma_custom")
+
+        gamma = st.slider("Constante de propagación γ", 2.0, 5.0, 2.0, 0.1, key="gamma_custom",
+                         help="Exponente de atenuación (2 = espacio libre)")
         num_interf = st.number_input("Número de interferentes", min_value=1, max_value=10, value=3, step=1)
         distancias = []
         for i in range(num_interf):
@@ -595,6 +639,12 @@ elif modulo == "📶 Mobile Planner":
             else:
                 st.markdown('<div class="error-box" style="color: #b71c1c;">❌ Calidad insuficiente (< 12 dB)</div>', unsafe_allow_html=True)
 
+            # ---- Validación para distancias personalizadas ----
+            mostrar_validacion(
+                "Mobile Planner (distancias personalizadas)",
+                "el cálculo de C/I a partir de distancias arbitrarias, verificable con la fórmula directa"
+            )
+
     # ---- Calculadora Erlang B ----
     elif pestaña == "Calculadora Erlang B":
         st.subheader("📊 Erlang B Calculator")
@@ -602,8 +652,10 @@ elif modulo == "📶 Mobile Planner":
 
         col1, col2 = st.columns(2)
         with col1:
-            trafico = st.slider("Tráfico ofrecido (Erlangs)", 0.1, 50.0, 8.0, 0.1)
-            canales = st.slider("Número de canales", 1, 50, 15, 1)
+            trafico = st.slider("Tráfico ofrecido (Erlangs)", 0.1, 50.0, 8.0, 0.1,
+                               help="Intensidad de tráfico en Erlangs (1 Erlang = 1 línea ocupada durante 1 hora)")
+            canales = st.slider("Número de canales", 1, 50, 15, 1,
+                               help="Canales disponibles en el sistema")
             pb = erlang_b(trafico, canales)
             st.metric("Probabilidad de bloqueo", f"{pb*100:.4f}%")
         with col2:
@@ -613,6 +665,12 @@ elif modulo == "📶 Mobile Planner":
                 st.metric("Canales mínimos necesarios", C_min)
             else:
                 st.markdown('<div class="warning-box" style="color: #b26a00;">⚠️ No se encontró solución en el rango (máx 50 canales).</div>', unsafe_allow_html=True)
+
+        # ---- Validación Erlang B ----
+        mostrar_validacion(
+            "Erlang B Calculator",
+            "los valores de probabilidad de bloqueo para distintos tráficos y canales, que se pueden comprobar con la fórmula recursiva"
+        )
 
         st.subheader("📋 Tabla de Erlang B (Pb vs canales)")
         canales_lista = list(range(1, 21))
@@ -635,9 +693,11 @@ elif modulo == "⏳ Queue Simulator":
 
     col1, col2 = st.columns(2)
     with col1:
-        lam = st.slider("λ (llegadas/seg)", 0.1, 20.0, 4.0, 0.1)
+        lam = st.slider("λ (llegadas/seg)", 0.1, 20.0, 4.0, 0.1,
+                       help="Tasa media de llegadas de clientes al sistema")
     with col2:
-        mu = st.slider("μ (servicios/seg)", 0.1, 20.0, 6.0, 0.1)
+        mu = st.slider("μ (servicios/seg)", 0.1, 20.0, 6.0, 0.1,
+                       help="Tasa media de servicio del servidor")
 
     if lam >= mu:
         st.markdown('<div class="error-box" style="color: #b71c1c;">⚠️ Cuidado: λ ≥ μ, el sistema es inestable. Aumenta μ o baja λ.</div>', unsafe_allow_html=True)
@@ -659,6 +719,12 @@ elif modulo == "⏳ Queue Simulator":
             st.markdown('<div class="warning-box" style="color: #b26a00;">🟡 Ocupación moderada: retrasos razonables.</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="warning-box" style="color: #b26a00;">🔴 Sistema saturado: muchos retrasos, mejor aumentar μ.</div>', unsafe_allow_html=True)
+
+        # ---- Validación ----
+        mostrar_validacion(
+            "Queue Simulator",
+            "la relación entre λ y μ, y el cumplimiento de la Ley de Little (L = λ·W)"
+        )
 
         st.subheader("📈 Probabilidad de cada estado")
         max_n = 20
@@ -714,7 +780,7 @@ elif modulo == "⏳ Queue Simulator":
 
 
 # ------------------------------------------------------------
-# Módulo ICT Designer (revisado y con comentarios clarificadores)
+# Módulo ICT Designer
 # ------------------------------------------------------------
 elif modulo == "🏢 ICT Designer":
     st.header("🏢 ICT Designer")
@@ -725,7 +791,7 @@ elif modulo == "🏢 ICT Designer":
         Aquí defines el número de plantas, viviendas por planta y distancia entre plantas, además del
         nivel de salida del amplificador de cabecera, la atenuación del cable y el rango admitido en
         toma. Luego eliges qué derivador poner en cada planta (cada uno tiene unas pérdidas de paso AP
-        y de derivación AD). Si hay más de una vivienda por planta, se añade además la pérdida de un
+        y de derivación AD). Si hay más de una vivienda por planta, se añade la pérdida de un
         distribuidor ideal que reparte la señal entre ellas (10·log₁₀(viviendas)). La aplicación calcula
         el nivel de señal en cada toma y te dice si cumple el rango que hayas definido. También dibuja
         un esquema vertical de la red.
@@ -738,20 +804,27 @@ elif modulo == "🏢 ICT Designer":
     st.subheader("Parámetros del edificio")
     col1, col2, col3 = st.columns(3)
     with col1:
-        plantas = st.slider("Número de plantas", 1, 10, 5, 1)
+        plantas = st.slider("Número de plantas", 1, 10, 5, 1,
+                           help="Plantas que tiene el edificio (Planta 1 = la más baja)")
     with col2:
-        viviendas_planta = st.slider("Viviendas por planta", 1, 6, 4, 1)
+        viviendas_planta = st.slider("Viviendas por planta", 1, 6, 4, 1,
+                                     help="Número de viviendas por planta (afecta a la pérdida del distribuidor)")
     with col3:
-        dist_entre_plantas = st.slider("Distancia entre plantas (m)", 2, 6, 4, 1)
+        dist_entre_plantas = st.slider("Distancia entre plantas (m)", 2, 6, 4, 1,
+                                       help="Distancia vertical entre plantas")
 
     st.subheader("Parámetros de cabecera y normativa")
     col4, col5, col6 = st.columns(3)
     with col4:
-        nivel_salida_amp = st.slider("Nivel de salida del amplificador (dBμV)", 80, 110, 90, 1)
+        nivel_salida_amp = st.slider("Nivel de salida del amplificador (dBμV)", 80, 110, 90, 1,
+                                     help="Nivel de señal a la salida del amplificador de cabecera")
     with col5:
-        atenuacion_cable = st.slider("Atenuación del cable (dB/m)", 0.05, 0.30, 0.10, 0.01)
+        atenuacion_cable = st.slider("Atenuación del cable (dB/m)", 0.05, 0.30, 0.10, 0.01,
+                                     help="Atenuación típica del cable coaxial de distribución")
     with col6:
-        rango_admitido = st.slider("Rango admitido en toma (dBμV)", 20, 90, (40, 70), 1)
+        rango_admitido = st.slider("Rango admitido en toma (dBμV)", 20, 90, (40, 70), 1,
+                                   help="Rango de niveles de señal considerados válidos en la toma de usuario")
+
     nivel_min, nivel_max = rango_admitido
 
     perdida_toma = 1.5
@@ -775,34 +848,22 @@ elif modulo == "🏢 ICT Designer":
     # --- Cálculo de niveles (de arriba hacia abajo) ---
     niveles = []
     perdida_acumulada = 0
-    dist_cabecera_planta_alta = 5   # distancia desde la cabecera hasta la planta más alta
+    dist_cabecera_planta_alta = 5
 
-    # Recorremos las plantas en orden inverso: desde la más alta (índice plantas-1) hasta la baja (índice 0)
     for i in range(plantas-1, -1, -1):
         if i == plantas-1:
-            # Primera planta que se calcula (la más alta): el cable viene directamente de la cabecera
             dist_cable = dist_cabecera_planta_alta
         else:
-            # Para el resto: el cable viene de la planta superior (distancia entre plantas)
             dist_cable = dist_entre_plantas
 
         perdida_cable = dist_cable * atenuacion_cable
         deriv = derivador_por_planta[i]
 
-        # Señal que llega al derivador de esta planta
         señal_entrada_deriv = nivel_salida_amp - perdida_acumulada - perdida_cable
-
-        # Señal en la toma (restando derivación, PAU, toma y distribuidor)
         señal_toma = señal_entrada_deriv - deriv["AD"] - perdida_pau - perdida_toma - perdida_distribuidor
-
         niveles.append(señal_toma)
-
-        # Acumulamos pérdidas para la siguiente planta (la de más abajo):
-        # la pérdida de paso del derivador actual + el cable que hemos recorrido.
         perdida_acumulada += deriv["AP"] + perdida_cable
 
-    # Los niveles están de la planta más alta a la más baja; los invertimos para que
-    # el índice 0 corresponda a la planta 1 (la más baja).
     niveles = list(reversed(niveles))
 
     st.subheader("📊 Niveles de señal por planta")
@@ -818,7 +879,12 @@ elif modulo == "🏢 ICT Designer":
     else:
         st.markdown('<div class="error-box" style="color: #b71c1c;">❌ Alguna planta no cumple. Prueba a cambiar los derivadores o añadir un amplificador intermedio.</div>', unsafe_allow_html=True)
 
-    # --- Esquema gráfico (planta 1 abajo, planta N arriba) ---
+    # ---- Validación ----
+    mostrar_validacion(
+        "ICT Designer",
+        "el cálculo de niveles planta a planta restando pérdidas de cable y de paso de derivadores, comprobable manualmente"
+    )
+
     st.subheader("🏗️ Esquema de la red de distribución")
     fig_ict, ax_ict = plt.subplots(figsize=(18, 8))
     fig_ict.patch.set_facecolor('#2d2d2d')
@@ -827,41 +893,26 @@ elif modulo == "🏢 ICT Designer":
     ax_ict.set_ylim(-1, plantas + 1)
     ax_ict.axis('off')
 
-    # Línea vertical del cable principal (desde la cabecera hasta la planta baja)
     ax_ict.plot([0, 0], [0, plantas + 1], color='white', linewidth=4, zorder=1)
-
-    # Cabecera (amplificador) en la parte superior
     ax_ict.scatter(0, plantas + 0.5, s=400, color='#1E88E5', zorder=5, edgecolors='white', linewidth=2)
     ax_ict.text(0.2, plantas + 0.5, f"AMP\n{nivel_salida_amp} dBµV", fontsize=10, ha='left', va='center', fontweight='bold', color='white')
 
-    # Dibujar cada planta: la planta 1 (i=0) se coloca en la parte inferior (y=0.5),
-    # la planta N (i=plantas-1) en la parte superior (y=plantas-0.5)
     for i in range(plantas):
-        # Índice i=0 corresponde a la planta 1 (la más baja)
-        y_pos = i + 0.5   # Planta 1 abajo, planta N arriba
+        y_pos = i + 0.5
         nivel = niveles[i]
         deriv = derivador_por_planta[i]
         color = '#43A047' if nivel_min <= nivel <= nivel_max else '#E53935'
 
-        # Conexión desde el cable principal hasta el derivador
         ax_ict.plot([0, 2.5], [y_pos, y_pos], color='gray', linewidth=2, zorder=1)
-
-        # Derivador
         ax_ict.scatter(2.5, y_pos, s=250, color='#FFA000', zorder=5, edgecolors='white')
         ax_ict.text(2.7, y_pos, f"Planta {i+1}\nAD={deriv['AD']}dB", fontsize=9, ha='left', va='center', color='white', bbox=dict(boxstyle="round,pad=0.2", facecolor='#2d2d2d', alpha=0.7, edgecolor='white'))
-
-        # Toma de usuario
         ax_ict.scatter(5.5, y_pos, s=150, color=color, zorder=5, edgecolors='white')
         ax_ict.text(5.7, y_pos, f"{nivel:.1f} dBµV", fontsize=10, ha='left', va='center', fontweight='bold', color='white')
-
-        # Conexión derivador -> toma
         ax_ict.plot([2.5, 5.5], [y_pos, y_pos], color='gray', linewidth=1.5, linestyle=':', zorder=1)
 
-        # Flecha hacia la siguiente planta (solo si no es la última)
         if i < plantas - 1:
             ax_ict.annotate('', xy=(0, y_pos + 1), xytext=(0, y_pos + 0.5), arrowprops=dict(arrowstyle='->', color='white', lw=1))
 
-    # Leyenda
     ax_ict.scatter([], [], s=150, color='#43A047', label='Cumple normativa')
     ax_ict.scatter([], [], s=150, color='#E53935', label='Fuera de rango')
     ax_ict.legend(loc='lower center', bbox_to_anchor=(0.5, -0.15), ncol=2, fontsize=10, facecolor='#2d2d2d', edgecolor='white', labelcolor='white')

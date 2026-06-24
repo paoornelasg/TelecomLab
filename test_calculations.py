@@ -259,8 +259,7 @@ def test_mm1_metrics_rechaza_sistema_inestable():
 
 
 # ------------------------------------------------------------
-# Reproducción literal del examen resuelto (PropuestaExamenIRC_Curso2526)
-# Ejercicio GPON (Parte 3, pregunta 3)
+# Ejercicio examen GPON
 # ------------------------------------------------------------
 
 def test_examen_gpon_apartado_a_distancia_maxima():
@@ -285,7 +284,7 @@ def test_examen_gpon_apartado_b_modulacion_downlink():
     modulaciones = [("16-QAM", 16, 21.5), ("8-QAM", 8, 18), ("4-QAM", 4, 14.5)]
     resultado = mejor_modulacion(modulaciones, 40 * 64, perdidas_dl, -100.0, potencia_max=30)
 
-    # El examen descarta 16-QAM (33.62 dBm) y 8-QAM (31.36 dBm) por exceder
+    # Se descartan 16-QAM (33.62 dBm) y 8-QAM (31.36 dBm) por exceder
     # los 30 dBm máximos de la OLT, y elige 4-QAM con 29.63 dBm.
     assert resultado is not None, "Debería existir una modulación válida (4-QAM)"
     assert resultado["nombre"] == "4-QAM", "El examen elige 4-QAM para minimizar BW dentro del presupuesto"
@@ -319,8 +318,7 @@ def test_examen_gpon_apartado_c_modulacion_uplink():
 
 
 # ------------------------------------------------------------
-# Reproducción literal del examen resuelto: ejercicio de telefonía
-# móvil celular (Parte 3, pregunta 3, apartados a y c)
+# Ejercicio de telefonía móvil celular
 # ------------------------------------------------------------
 
 def test_examen_movil_apartado_a_ci_sistema_original():
